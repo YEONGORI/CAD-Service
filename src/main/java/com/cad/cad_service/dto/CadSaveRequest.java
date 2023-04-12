@@ -1,4 +1,4 @@
-package com.cad.searh_service.dto.cadDto;
+package com.cad.cad_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

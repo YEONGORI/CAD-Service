@@ -1,4 +1,4 @@
-package com.cad.searh_service.util;
+package com.cad.cad_service.util;
 
 import com.aspose.cad.Image;
 import com.aspose.cad.fileformats.cad.CadImage;
@@ -9,7 +9,7 @@ import com.aspose.cad.fileformats.cad.cadobjects.CadMText;
 import com.aspose.cad.fileformats.cad.cadobjects.CadText;
 import com.aspose.cad.imageoptions.CadRasterizationOptions;
 import com.aspose.cad.imageoptions.JpegOptions;
-import com.cad.searh_service.controller.CadController;
+import com.cad.cad_service.controller.CadController;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

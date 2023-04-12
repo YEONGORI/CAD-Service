@@ -1,4 +1,4 @@
-package com.cad.searh_service.util;
+package com.cad.cad_service.util;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -7,7 +7,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferProgress;
-import com.cad.searh_service.controller.CadController;
+import com.cad.cad_service.controller.CadController;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +46,7 @@ public class S3Util {
     @Value("${cloud.aws.s3.key}")
     public String key;
 
+    @MeasureExecutionTime
     public void downloadFolder(String project) {
         try {
             File s3Dir = new File("s3-download");
@@ -54,15 +55,19 @@ public class S3Util {
 
             DecimalFormat decimalFormat = new DecimalFormat("##0.00");
 
-            while (!download.isDone()) {
-                TransferProgress progress = download.getProgress();
-                double percent = progress.getPercentTransferred();
-                System.out.println("[ download ]" + decimalFormat.format(percent) + "% download progressing ...");
-            }
+//            while (!download.isDone()) {
+//                TransferProgress progress = download.getProgress();
+//                double percent = progress.getPercentTransferred();
+//                System.out.println("[ download ]" + decimalFormat.format(percent) + "% download progressing ...");
+//                Thread.sleep(3000);
+//            }
         } catch (AmazonServiceException e) {
             log.error("Amazon service exception: ", e);
         }
-    }
+//        } catch (InterruptedException e) {
+//            log.error("Thread sleep exception: ", e);
+//        }
+}
 
     public String uploadImg(String title, ByteArrayOutputStream outputStream) {
         try {

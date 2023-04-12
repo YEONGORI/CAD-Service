@@ -1,4 +1,4 @@
-package com.cad.searh_service.entity;
+package com.cad.cad_service.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

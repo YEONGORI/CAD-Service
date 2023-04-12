@@ -1,10 +1,10 @@
-package com.cad.searh_service.service;
+package com.cad.cad_service.service;
 
-import com.cad.searh_service.entity.Cad;
-import com.cad.searh_service.dto.cadDto.CadSaveRequest;
-import com.cad.searh_service.repository.CadRepository;
-import com.cad.searh_service.util.AsposeUtil;
-import com.cad.searh_service.util.S3Util;
+import com.cad.cad_service.entity.Cad;
+import com.cad.cad_service.dto.CadSaveRequest;
+import com.cad.cad_service.repository.CadRepository;
+import com.cad.cad_service.util.AsposeUtil;
+import com.cad.cad_service.util.S3Util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

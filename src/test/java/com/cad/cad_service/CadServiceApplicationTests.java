@@ -1,10 +1,10 @@
-package com.cad.searh_service;
+package com.cad.cad_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SearhServiceApplicationTests {
+class CadServiceApplicationTests {
 
     @Test
     void contextLoads() {

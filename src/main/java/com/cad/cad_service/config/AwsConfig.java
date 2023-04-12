@@ -1,4 +1,4 @@
-package com.cad.searh_service.config;
+package com.cad.cad_service.config;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;

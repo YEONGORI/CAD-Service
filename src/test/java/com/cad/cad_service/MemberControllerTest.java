@@ -1,4 +1,4 @@
-package com.cad.searh_service;
+package com.cad.cad_service;
 
 public class MemberControllerTest {
 }
