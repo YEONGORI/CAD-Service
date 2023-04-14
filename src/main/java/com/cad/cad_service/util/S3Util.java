@@ -1,12 +1,18 @@
 package com.cad.cad_service.util;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.S3ArnUtils;
+import com.amazonaws.services.s3.iterable.S3Objects;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.transfer.MultipleFileDownload;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferProgress;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.transfer.*;
+import com.amazonaws.services.s3.transfer.internal.MultipleFileDownloadImpl;
 import com.cad.cad_service.controller.CadController;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -14,6 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 //import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.utils.ThreadFactoryBuilder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -29,11 +37,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @RequiredArgsConstructor
-//@PropertySource(value = "application.properties")
 public class S3Util {
     private final Logger log = LoggerFactory.getLogger(CadController.class);
     private final TransferManager transferManager;
@@ -51,23 +63,32 @@ public class S3Util {
         try {
             File s3Dir = new File("s3-download");
             project = URLDecoder.decode(project, StandardCharsets.UTF_8);
-            MultipleFileDownload download = transferManager.downloadDirectory(bucket, project, s3Dir);
-
-            DecimalFormat decimalFormat = new DecimalFormat("##0.00");
-
-//            while (!download.isDone()) {
-//                TransferProgress progress = download.getProgress();
-//                double percent = progress.getPercentTransferred();
-//                System.out.println("[ download ]" + decimalFormat.format(percent) + "% download progressing ...");
-//                Thread.sleep(3000);
-//            }
+            List<MultipleFileDownload> downloads = new ArrayList<>();
+            for (S3ObjectSummary summary : S3Objects.inBucket(s3Client, bucket)) {
+                if (summary.getKey().startsWith(project)) {
+                    File file = new File(s3Dir, summary.getKey().substring(project.length() + 1));
+                    downloads.add(transferManager.download(bucket, summary.getKey(), file));
+                }
+            }
+            for (MultipleFileDownload download : downloads) {
+                download.waitForCompletion();
+            }
         } catch (AmazonServiceException e) {
             log.error("Amazon service exception: ", e);
+        } catch (InterruptedException e) {
+            log.error("Thread sleep exception: ", e);
         }
+//        try {
+//            File s3Dir = new File("s3-download");
+//            project = URLDecoder.decode(project, StandardCharsets.UTF_8);
+//            MultipleFileDownload download = transferManager.downloadDirectory(bucket, project, s3Dir);
+//            download.waitForCompletion();
+//        } catch (AmazonServiceException e) {
+//            log.error("Amazon service exception: ", e);
 //        } catch (InterruptedException e) {
 //            log.error("Thread sleep exception: ", e);
 //        }
-}
+    }
 
     public String uploadImg(String title, ByteArrayOutputStream outputStream) {
         try {
