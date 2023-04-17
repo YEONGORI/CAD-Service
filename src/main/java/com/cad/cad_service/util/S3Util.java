@@ -1,27 +1,15 @@
 package com.cad.cad_service.util;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.S3ArnUtils;
-import com.amazonaws.services.s3.iterable.S3Objects;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.transfer.*;
-import com.amazonaws.services.s3.transfer.internal.MultipleFileDownloadImpl;
 import com.cad.cad_service.controller.CadController;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.utils.ThreadFactoryBuilder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -36,13 +24,8 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @Component
 @RequiredArgsConstructor
@@ -50,6 +33,7 @@ public class S3Util {
     private final Logger log = LoggerFactory.getLogger(CadController.class);
     private final TransferManager transferManager;
     private final AmazonS3Client s3Client;
+    private static final int TIMEOUT = 5;
 
     @Value("${cloud.aws.s3.bucket}")
     public String bucket;
@@ -61,23 +45,26 @@ public class S3Util {
     @MeasureExecutionTime
     public void downloadFolder(String project) {
         try {
-            File s3Dir = new File("s3-download");
             project = URLDecoder.decode(project, StandardCharsets.UTF_8);
-            List<MultipleFileDownload> downloads = new ArrayList<>();
-            for (S3ObjectSummary summary : S3Objects.inBucket(s3Client, bucket)) {
-                if (summary.getKey().startsWith(project)) {
-                    File file = new File(s3Dir, summary.getKey().substring(project.length() + 1));
-                    downloads.add(transferManager.download(bucket, summary.getKey(), file));
-                }
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            ListObjectsV2Result result = s3Client.listObjectsV2(bucket, project);
+            for (S3ObjectSummary summary: result.getObjectSummaries()) {
+                GetObjectRequest getObjectRequest = new GetObjectRequest(bucket, summary.getKey());
+                executor.submit(() -> {
+                    s3Client.getObject(getObjectRequest, new File(summary.getKey()));
+                });
             }
-            for (MultipleFileDownload download : downloads) {
-                download.waitForCompletion();
-            }
+            executor.shutdown();
+            executor.awaitTermination(TIMEOUT, TimeUnit.MINUTES);
         } catch (AmazonServiceException e) {
             log.error("Amazon service exception: ", e);
         } catch (InterruptedException e) {
-            log.error("Thread sleep exception: ", e);
+            log.error("awaitTermination exception: ", e);
         }
+    }
+
+//    @MeasureExecutionTime
+//    public void downloadFolderV0(String project) { // 리펙토링 전 S3 다운로드 함수
 //        try {
 //            File s3Dir = new File("s3-download");
 //            project = URLDecoder.decode(project, StandardCharsets.UTF_8);
@@ -88,7 +75,7 @@ public class S3Util {
 //        } catch (InterruptedException e) {
 //            log.error("Thread sleep exception: ", e);
 //        }
-    }
+//    }
 
     public String uploadImg(String title, ByteArrayOutputStream outputStream) {
         try {
