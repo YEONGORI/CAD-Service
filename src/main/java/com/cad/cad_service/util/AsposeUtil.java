@@ -34,9 +34,7 @@ public class AsposeUtil {
 
     public Map<String, String[]> getCadInfo(String project) {
         try {
-
         } catch () {
-
         }
     }
 
