@@ -64,7 +64,7 @@ public class S3Util {
     }
 
 //    @MeasureExecutionTime
-//    public void downloadFolderV0(String project) { // 리펙토링 전 S3 다운로드 함수
+//    public void downloadFolder(String project) { // 리펙토링 전 S3 다운로드 함수
 //        try {
 //            File s3Dir = new File("s3-download");
 //            project = URLDecoder.decode(project, StandardCharsets.UTF_8);
