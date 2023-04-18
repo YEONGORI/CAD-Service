@@ -34,28 +34,36 @@ public class AsposeUtil {
 
     public Map<String, String[]> getCadInfo(String project) {
         try {
-            Map<String, String[]> cadInfo = new HashMap<>();
-            Files.walkFileTree(Paths.get(cadDir + project), new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    if (!Files.isDirectory(file) && file.getFileName().toString().contains(".dwg")) {
-                        String title = file.getFileName().toString();
-                        String path = file.toAbsolutePath().toString();
-                        String index = extractCadIndex(path);
-                        ByteArrayOutputStream stream = convertCadToJpeg(path);
-                        String s3Url = s3Util.uploadImg(title, stream);
-                        path = path.substring(path.indexOf(project) + project.length(), path.indexOf(title) -1);
-                        cadInfo.put(index, new String[] {path, title, s3Url});
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-            return cadInfo;
-        } catch (IOException e) {
-            log.error("getCadInfo IOException: ", e);
-            return null;
+
+        } catch () {
+
         }
     }
+
+//    public Map<String, String[]> getCadInfo(String project) {
+//        try {
+//            Map<String, String[]> cadInfo = new HashMap<>();
+//            Files.walkFileTree(Paths.get(cadDir + project), new SimpleFileVisitor<>() {
+//                @Override
+//                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+//                    if (!Files.isDirectory(file) && file.getFileName().toString().contains(".dwg")) {
+//                        String title = file.getFileName().toString();
+//                        String path = file.toAbsolutePath().toString();
+//                        String index = extractCadIndex(path);
+//                        ByteArrayOutputStream stream = convertCadToJpeg(path);
+//                        String s3Url = s3Util.uploadImg(title, stream);
+//                        path = path.substring(path.indexOf(project) + project.length(), path.indexOf(title) -1);
+//                        cadInfo.put(index, new String[] {path, title, s3Url});
+//                    }
+//                    return FileVisitResult.CONTINUE;
+//                }
+//            });
+//            return cadInfo;
+//        } catch (IOException e) {
+//            log.error("getCadInfo IOException: ", e);
+//            return null;
+//        }
+//    }
 
     private ByteArrayOutputStream convertCadToJpeg(String cad) {
             Image image = Image.load(cad);
