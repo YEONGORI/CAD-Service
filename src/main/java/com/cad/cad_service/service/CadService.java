@@ -24,24 +24,24 @@ public class CadService {
         String author = request.getAuthor();
         LocalDateTime dateTime = LocalDateTime.now();
 
-        s3Util.downloadFolder(folder);
+//        s3Util.downloadFolder(folder);
         Map<String, String[]> cadInfo = asposeUtil.getCadInfo(folder);
-
-        cadInfo.forEach((key, value) -> {
-            String imgUrl = s3Util.encryptImgUrl(value[2]);
-            cadRepository.save(
-                Cad.builder()
-                        .author(author)
-                        .mainCategory(folder)
-                        .subCategory(value[0])
-                        .title(value[1])
-                        .index(key)
-                        .imgUrl(imgUrl)
-                        .createdAt(dateTime)
-                        .updatedAt(dateTime)
-                        .build()
-                );
-        });
+//
+//        cadInfo.forEach((key, value) -> {
+//            String imgUrl = s3Util.encryptImgUrl(value[2]);
+//            cadRepository.save(
+//                Cad.builder()
+//                        .author(author)
+//                        .mainCategory(folder)
+//                        .subCategory(value[0])
+//                        .title(value[1])
+//                        .index(key)
+//                        .imgUrl(imgUrl)
+//                        .createdAt(dateTime)
+//                        .updatedAt(dateTime)
+//                        .build()
+//                );
+//        });
     }
 
     public List<Cad> searchCadFile(String searchTerm) {

@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 @RequiredArgsConstructor
@@ -31,15 +32,34 @@ import java.util.stream.Stream;
 public class AsposeUtil {
     private final S3Util s3Util;
     private final Logger log = LoggerFactory.getLogger(CadController.class);
-    private static final String cadDir = System.getProperty("user.home") + File.separator + "cad" + File.separator;
+    private static final String cadDir = System.getProperty("user.dir") + File.separator;
 
+    @MeasureExecutionTime
     public Map<String, String[]> getCadInfo(String project) {
         try {
-            Stream
-        } catch () {
+            Map<String, String[]> cadInfo = new HashMap<>();
+            Files.walk(Paths.get(cadDir + project))
+                    .parallel()
+                    .filter(file -> !Files.isDirectory(file) && file.getFileName().toString().contains(".dwg"))
+                    .forEach(file -> {
+                        String title = file.getFileName().toString();
+                        String path = file.toAbsolutePath().toString();
+                        String index = extractCadIndex(path);
+//                        String index = "";
+//                        ByteArrayOutputStream stream = convertCadToJpeg(path);
+//                        String s3Url = s3Util.uploadImg(title, stream);
+                        String s3Url = "";
+                        path = path.substring(path.indexOf(project) + project.length(), path.indexOf(title) -1);
+                        cadInfo.put(index, new String[] {path, title, s3Url});
+                    });
+            return cadInfo;
+        } catch (IOException e) {
+            log.error("getCadInfo IOException: ", e);
+            return null;
         }
     }
 
+//    @MeasureExecutionTime
 //    public Map<String, String[]> getCadInfo(String project) {
 //        try {
 //            Map<String, String[]> cadInfo = new HashMap<>();
@@ -50,8 +70,9 @@ public class AsposeUtil {
 //                        String title = file.getFileName().toString();
 //                        String path = file.toAbsolutePath().toString();
 //                        String index = extractCadIndex(path);
-//                        ByteArrayOutputStream stream = convertCadToJpeg(path);
-//                        String s3Url = s3Util.uploadImg(title, stream);
+////                        ByteArrayOutputStream stream = convertCadToJpeg(path);
+////                        String s3Url = s3Util.uploadImg(title, stream);
+//                        String s3Url = "";
 //                        path = path.substring(path.indexOf(project) + project.length(), path.indexOf(title) -1);
 //                        cadInfo.put(index, new String[] {path, title, s3Url});
 //                    }
