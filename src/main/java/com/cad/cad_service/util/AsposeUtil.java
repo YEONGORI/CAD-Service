@@ -1,6 +1,8 @@
 package com.cad.cad_service.util;
 
 import com.aspose.cad.Image;
+import com.aspose.cad.cadexceptions.ImageException;
+import com.aspose.cad.cadexceptions.ImageLoadException;
 import com.aspose.cad.fileformats.cad.CadImage;
 import com.aspose.cad.fileformats.cad.cadconsts.CadEntityTypeName;
 import com.aspose.cad.fileformats.cad.cadobjects.CadBaseEntity;
@@ -19,13 +21,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Component
@@ -34,23 +33,49 @@ public class AsposeUtil {
     private final Logger log = LoggerFactory.getLogger(CadController.class);
     private static final String cadDir = System.getProperty("user.dir") + File.separator;
 
+    @MeasureExecutionTime
+    public Map<String, String[]> getCadInfo(String project) {
+        try {
+            ConcurrentHashMap<String, String[]> cadInfo = new ConcurrentHashMap<>();
+            Files.walk(Paths.get(cadDir + project))
+                    .filter(file -> !Files.isDirectory(file) && file.getFileName().toString().contains(".dwg"))
+                    .parallel()
+                    .forEach(file -> {
+                        String title = file.getFileName().toString();
+                        String path = file.toAbsolutePath().toString();
+                        String index = extractCadIndex(path);
+                        ByteArrayOutputStream stream = convertCadToJpeg(path);
+//                        String s3Url = s3Util.uploadImg(title, stream);
+                        String s3Url = "";
+                        path = path.substrgit ing(path.indexOf(project) + project.length(), path.indexOf(title) -1);
+                        cadInfo.put(index, new String[] {path, title, s3Url});
+                    });
+            return cadInfo;
+        } catch (IOException e) {
+            log.error("getCadInfo IOException: ", e);
+            return null;
+        }
+    }
+
 //    @MeasureExecutionTime
 //    public Map<String, String[]> getCadInfo(String project) {
 //        try {
 //            Map<String, String[]> cadInfo = new HashMap<>();
-//            Files.walk(Paths.get(cadDir + project))
-//                    .filter(file -> !Files.isDirectory(file) && file.getFileName().toString().contains(".dwg"))
-//                    .forEach(file -> {
+//            Files.walkFileTree(Paths.get(cadDir + project), new SimpleFileVisitor<>() {
+//                @Override
+//                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+//                    if (!Files.isDirectory(file) && file.getFileName().toString().contains(".dwg")) {
 //                        String title = file.getFileName().toString();
 //                        String path = file.toAbsolutePath().toString();
 //                        String index = extractCadIndex(path);
-////                        String index = "";
-////                        ByteArrayOutputStream stream = convertCadToJpeg(path);
-////                        String s3Url = s3Util.uploadImg(title, stream);
-//                        String s3Url = "";
+//                        ByteArrayOutputStream stream = convertCadToJpeg(path);
+//                        String s3Url = s3Util.uploadImg(title, stream);
 //                        path = path.substring(path.indexOf(project) + project.length(), path.indexOf(title) -1);
 //                        cadInfo.put(index, new String[] {path, title, s3Url});
-//                    });
+//                    }
+//                    return FileVisitResult.CONTINUE;
+//                }
+//            });
 //            System.out.println("FIN");
 //            return cadInfo;
 //        } catch (IOException e) {
@@ -59,36 +84,7 @@ public class AsposeUtil {
 //        }
 //    }
 
-    @MeasureExecutionTime
-    public Map<String, String[]> getCadInfo(String project) {
-        try {
-            Map<String, String[]> cadInfo = new HashMap<>();
-            Files.walkFileTree(Paths.get(cadDir + project), new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    if (!Files.isDirectory(file) && file.getFileName().toString().contains(".dwg")) {
-                        String title = file.getFileName().toString();
-                        String path = file.toAbsolutePath().toString();
-                        String index = extractCadIndex(path);
-//                        ByteArrayOutputStream stream = convertCadToJpeg(path);
-//                        String s3Url = s3Util.uploadImg(title, stream);
-                        String s3Url = "";
-                        path = path.substring(path.indexOf(project) + project.length(), path.indexOf(title) -1);
-                        cadInfo.put(index, new String[] {path, title, s3Url});
-                    }
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-            System.out.println("FIN");
-            return cadInfo;
-        } catch (IOException e) {
-            log.error("getCadInfo IOException: ", e);
-            return null;
-        }
-    }
-
     private ByteArrayOutputStream convertCadToJpeg(String cad) {
-            Image image = Image.load(cad);
             CadRasterizationOptions options = new CadRasterizationOptions();
             options.setPageHeight(200);
             options.setPageWidth(200);
@@ -96,30 +92,37 @@ public class AsposeUtil {
             JpegOptions jpegOptions = new JpegOptions();
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             jpegOptions.setVectorRasterizationOptions(options);
-
-            image.save(stream, jpegOptions);
+            synchronized(this){
+                try (Image image = Image.load(cad)) {
+                    image.save(stream, jpegOptions);
+                } catch (ImageLoadException e) {
+                    log.error("Image Load Failed: ", e);
+                }
+            }
             return stream;
     }
 
-    private String extractCadIndex(String cad) {
+    private synchronized String extractCadIndex(String cad) {
         try {
             Set<String> index = new HashSet<>();
-            CadImage cadImage = (CadImage) CadImage.load(cad);
-            for (CadBlockEntity blockEntity : cadImage.getBlockEntities().getValues()) {
-                for (CadBaseEntity entity : blockEntity.getEntities()) {
-                    if (entity.getTypeName() == CadEntityTypeName.TEXT) {
-                        CadText cadText = (CadText) entity;
-                        index.add(filterCadIndex(cadText.getDefaultValue()));
-                    }
-                    else if (entity.getTypeName() == CadEntityTypeName.MTEXT) {
-                        CadMText cadMText = (CadMText) entity;
-                        index.add(filterCadIndex(cadMText.getText()));
+            try (CadImage cadImage = (CadImage) CadImage.load(cad)) {
+                for (CadBlockEntity blockEntity : cadImage.getBlockEntities().getValues()) {
+                    for (CadBaseEntity entity : blockEntity.getEntities()) {
+                        if (entity.getTypeName() == CadEntityTypeName.TEXT) {
+                            CadText cadText = (CadText) entity;
+                            index.add(filterCadIndex(cadText.getDefaultValue()));
+                        } else if (entity.getTypeName() == CadEntityTypeName.MTEXT) {
+                            CadMText cadMText = (CadMText) entity;
+                            index.add(filterCadIndex(cadMText.getText()));
+                        }
                     }
                 }
+            } catch (ImageLoadException e) {
+                log.error("Image Load Failed: ", e);
             }
-            return String.join(" | ", index);
-        } catch (Exception e) {
-            e.printStackTrace();
+            return String.join(", ", index);
+        } catch (ImageException e) {
+            log.error("CAD File Disabled: ", e);
         }
         return null;
     }
