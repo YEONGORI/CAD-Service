@@ -25,7 +25,8 @@ public class CadService {
         LocalDateTime dateTime = LocalDateTime.now();
 
 //        s3Util.downloadFolder(folder);
-        Map<String, String[]> cadInfo = asposeUtil.getCadInfo(folder);
+//        Map<String, String[]> cadInfo = asposeUtil.getCadInfo(folder);
+        asposeUtil.getCadInfo(folder);
 //
 //        cadInfo.forEach((key, value) -> {
 //            String imgUrl = s3Util.encryptImgUrl(value[2]);
